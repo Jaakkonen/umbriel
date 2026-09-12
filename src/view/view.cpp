@@ -2172,6 +2172,10 @@ namespace umbriel {
 
   void View::updateShadow(int contentWidth, int contentHeight) {
     UMBRIEL_ZONE("View::updateShadow");
+    if (!m_ruleDecorations) {
+      m_decoration.hideShadow();
+      return;
+    }
     const int borderTotal = borderInset();
     m_decoration.updateShadow(
         contentWidth, contentHeight, borderTotal, decorated() ? config().appearance.cornerRadius : 0
@@ -2181,7 +2185,7 @@ namespace umbriel {
 
   void View::showDecorations(bool enabled) {
     m_decoration.ensureBorders(m_contentTree);
-    m_decoration.setBordersEnabled(enabled);
+    m_decoration.setBordersEnabled(enabled && m_ruleDecorations);
     updateBorderGeometry();
     applyCornerRadius();
     updateBlur();
@@ -4070,7 +4074,7 @@ namespace umbriel {
     wlr_xdg_toplevel_set_tiled(m_toplevel, WLR_EDGE_TOP | WLR_EDGE_RIGHT | WLR_EDGE_BOTTOM | WLR_EDGE_LEFT);
     wlr_xdg_toplevel_set_maximized(m_toplevel, false);
     m_decoration.ensureBorders(m_contentTree);
-    m_decoration.setBordersEnabled(!wantFullscreen);
+    m_decoration.setBordersEnabled(!wantFullscreen && m_ruleDecorations);
     updateBorderGeometry();
     if (m_workspace != nullptr && placement == TilePlacement::Layout) {
       m_workspace->layoutAttach(this);
@@ -4197,7 +4201,7 @@ namespace umbriel {
         m_hasFullscreenRestoreBox = false;
       }
     }
-    m_decoration.setBordersEnabled(!fullscreen);
+    m_decoration.setBordersEnabled(!fullscreen && m_ruleDecorations);
     applyCornerRadius();
     updateBlur();
     updateShadow();
@@ -4556,6 +4560,11 @@ namespace umbriel {
     const ResolvedWindowRule& rule = resolved != nullptr ? *resolved : resolvedRules();
     m_appliedRuleState = ruleState();
     m_decoration.applyRule(rule);
+    const bool decorations = rule.decorations.value_or(true);
+    if (decorations != m_ruleDecorations) {
+      m_ruleDecorations = decorations;
+      showDecorations(!m_toplevel->scheduled.fullscreen && !m_maximizedToEdges);
+    }
     const float newOpacity = rule.opacity ? static_cast<float>(*rule.opacity) : 1.0F;
     if (newOpacity != m_ruleOpacity) {
       m_ruleOpacity = newOpacity;

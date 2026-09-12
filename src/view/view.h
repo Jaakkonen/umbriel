@@ -682,6 +682,7 @@ namespace umbriel {
     // Window rules: unsettled means title was empty at map, so a later
     // handleSetTitle re-applies all rule effects one more time.
     bool m_initialRulesSettled = false;
+    bool m_ruleDecorations = true;
     float m_ruleOpacity = 1.0F;
     float m_dragOpacity = 1.0F;
     float m_overviewOpacity = 1.0F;

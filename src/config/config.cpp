@@ -2116,6 +2116,7 @@ namespace umbriel {
             .boolean("default_focused", rule.defaultFocused)
             .boolean("default_pinned", rule.defaultPinned)
             .boolean("focus_on_activate", rule.focusOnActivate)
+            .boolean("decorations", rule.decorations)
             .boolean("tearing", rule.allowTearing)
             .boolean("blur", rule.blur)
             .boolean("blur_popups", rule.blurPopups)

@@ -1063,4 +1063,26 @@ UMBRIEL_TEST(securityContextRulesGrantGlobalsByMetadata) {
   CHECK_EQ(umbriel::securityContextRuleGlobals(config, "org.flatpak", "org.example.Bar").size(), size_t{2});
 }
 
+UMBRIEL_TEST(decorationsRulesPreserveFalseAndRestoreWhenStateStopsMatching) {
+  Config config;
+  WindowRule rule;
+  rule.matchFloating = true;
+  rule.decorations = false;
+  config.windowRules.push_back(rule);
+
+  const auto resolve = [&](bool floating) {
+    return umbriel::resolveWindowRules(
+        config, "overlay", "Overlay", std::nullopt, ContentType::None, {.floating = floating}, 0
+    );
+  };
+  CHECK(!resolve(false).decorations.has_value());
+  CHECK(resolve(true).decorations == false);
+
+  WindowRule override;
+  override.decorations = true;
+  config.windowRules.push_back(override);
+  CHECK(resolve(true).decorations == true);
+  CHECK(resolve(false).decorations == true);
+}
+
 int main() { return RUN_TESTS(); }

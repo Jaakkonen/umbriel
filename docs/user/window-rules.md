@@ -143,6 +143,7 @@ and sets its extent.
 
 | Key | Description |
 | --- | --- |
+| `decorations` | Show compositor borders, rounded corners, and shadows (default `true`). Does not change client decorations, geometry, or input regions. Fullscreen and maximize-to-edges still suppress decorations. |
 | `opacity` | Surface opacity from 0.0 to 1.0. |
 | `blur` | Enable or disable window blur. |
 | `blur_popups` | Apply blur to descendant XDG popups. |

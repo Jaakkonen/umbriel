@@ -3132,4 +3132,20 @@ UMBRIEL_TEST(packagedAnimationDefaultsMatchCompiledDefaults) {
   CHECK(store.config().animation == umbriel::Config{}.animation);
 }
 
+UMBRIEL_TEST(decorationsRuleLoadsAndIgnoresNonBooleanValues) {
+  const TempConfig file;
+  ConfigStore& store = umbriel::configStore();
+  store.setRootPath(file.path(), true);
+  file.write("[[window_rule]]\ndecorations = false\n");
+  CHECK(store.reload().success);
+  CHECK(store.config().windowRules[0].decorations == false);
+  file.write("[[window_rule]]\ndecorations = true\n");
+  CHECK(store.reload().success);
+  CHECK(store.config().windowRules[0].decorations == true);
+  file.write("[[window_rule]]\ndecorations = 0\n");
+  CHECK(store.reload().success);
+  CHECK(!store.config().windowRules[0].decorations.has_value());
+  CHECK(containsDiagnostic(store, "ignoring window_rule.decorations (expected boolean)"));
+}
+
 int main() { return RUN_TESTS(); }

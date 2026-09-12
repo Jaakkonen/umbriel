@@ -169,10 +169,7 @@ default_position = { x = 0, y = 0, anchor = "bottom_right" }
 default_focused = false
 default_pinned = true
 
-# ==============================================================================
-# Layer rules
-# https://docs.noctalia.dev/umbriel/layer-rules/
-[[layer_rule]]
+# =======================================================================[[layer_rule]]
 match.namespace = "^noctalia-(bar-[^\"]+|notification|dock|panel|attached-panel|osd|desktop-widget-[^\"]*)$"
 blur = true
 blur_ignore_alpha = 0.5
