@@ -22,6 +22,10 @@ namespace umbriel {
     Master,
   };
 
+  enum class DwindleDirectionalMove { Swap, Restructure };
+
+  enum class DirectionalMoveResult { Moved, Boundary, Blocked };
+
   enum class ScrollingDirection {
     Horizontal,
     Vertical,

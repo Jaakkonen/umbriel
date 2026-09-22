@@ -147,12 +147,12 @@ namespace umbriel {
     [[nodiscard]] View* focusLastColumn() const;
     [[nodiscard]] View* focusReplacementForRemoval(const View* view) const;
     [[nodiscard]] View* cycleFocusTarget(int direction) const;
-    bool moveFocusedColumn(int direction);
+    DirectionalMoveResult moveFocusedColumn(int direction);
     bool moveFocusedColumnFirst();
     bool moveFocusedColumnLast();
     bool consumeFocused(int direction);
     bool expelFocused(int direction);
-    bool moveFocusedVertical(int direction);
+    DirectionalMoveResult moveFocusedVertical(int direction);
     bool swapFocusedInCycle(int direction);
     bool increaseMasterCount();
     bool decreaseMasterCount();
@@ -225,6 +225,7 @@ namespace umbriel {
     // the move entered (target column, or crossed dwindle subtree). Moves that
     // stay inside one group keep `target`.
     [[nodiscard]] View* preferRecentPeer(View* target) const;
+    DirectionalMoveResult moveFocusedDirection(bool horizontal, int direction);
     bool moveLaneAlongStrip(int direction);
     bool moveWithinLane(int direction);
     // Take `view` out of the layout while holding visible lanes still.

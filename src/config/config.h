@@ -61,6 +61,7 @@ namespace umbriel {
     } scrolling;
     struct Dwindle {
       std::optional<bool> preserveSplit;
+      std::optional<DwindleDirectionalMove> directionalMove;
       std::optional<bool> newExitsFullscreen;
       bool operator==(const Dwindle&) const = default;
     } dwindle;
@@ -109,6 +110,7 @@ namespace umbriel {
     } scrolling;
     struct Dwindle {
       bool preserveSplit = false;
+      DwindleDirectionalMove directionalMove = DwindleDirectionalMove::Swap;
       bool newExitsFullscreen = false;
       bool operator==(const Dwindle&) const = default;
     } dwindle;
@@ -675,6 +677,7 @@ namespace umbriel {
       } scrolling;
       struct Dwindle {
         bool preserveSplit = false;
+        DwindleDirectionalMove directionalMove = DwindleDirectionalMove::Swap;
         bool newExitsFullscreen = false;
         bool operator==(const Dwindle&) const = default;
       } dwindle;

@@ -128,12 +128,14 @@ Dwindle recursively splits tiles into independently sized regions.
 
 ```toml
 [layout.dwindle]
+directional_move = "swap" # or "restructure"
 preserve_split = false
 new_exits_fullscreen = false
 ```
 
 | Key | Default | Description |
 | --- | --- | --- |
+| `directional_move` | `"swap"` | Swap tiles, or reshape splits with `"restructure"`. |
 | `preserve_split` | `false` | Keep each split direction fixed after creation. |
 | `new_exits_fullscreen` | `false` | Exit fullscreen when a new window opens. |
 
@@ -145,6 +147,37 @@ stable, manually shaped regions.
 
 Dwindle has no multi-window columns. Moving one into Dwindle places its windows
 as separate tiles.
+
+### Directional movement
+
+With `directional_move = "restructure"`, moving a normal tiled window across
+its parent split swaps it with a sibling or inserts it into the neighboring
+subtree. Moving perpendicular to that split places the window beside, above,
+or below the remaining group. Moving outward leaves nested groups before
+reaching the workspace edge. New splits start at equal sizes and keep their
+chosen axis even when `preserve_split` is false. Other split ratios and lock
+states are retained.
+
+This applies to `column-move-left/right`, `window-move-up/down`, and the local
+step of `window-move-or-output-*` and `window-move-or-workspace-up/down`.
+The latter actions cross the boundary only after local movement is exhausted;
+explicit output/workspace transfers remain immediate. With `"swap"`, the
+existing directional tile swaps remain unchanged.
+
+For example, with C focused in `A | (B | C)`, Down first puts C below B in the
+right half. Down again puts C below the remaining A/B group. A third Down
+reaches the boundary, where an `or-output` action transfers it to the output
+below if one exists. Grouping matters: `(A | B) | C` instead puts C below the
+whole A/B group on the first Down, even if the initial rows look identical.
+
+When entering a subtree, destination selection uses the same gap, overlap,
+and center-distance ranking as directional focus, restricted to that subtree.
+Ties follow tree order. The pointer position does not affect the move.
+
+Floating, fullscreen, and maximized windows keep their existing movement
+behavior. This setting does not change consume/expel, first/last column moves,
+explicit swaps, or other layouts. It can be overridden per workspace; reloading
+it changes subsequent actions without rebuilding the existing split tree.
 
 ## Master layout
 

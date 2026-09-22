@@ -136,28 +136,25 @@ namespace umbriel {
     return true;
   }
 
-  void DwindleLayout::splitLeaf(Node* node, View* newView, Node::Type split, bool newFirst) {
-    if (node == nullptr) {
-      return;
+  void DwindleLayout::splitNode(Node* node, View* newView, Node::Type split, bool newFirst) {
+    auto previous = std::make_unique<Node>(std::move(*node));
+    if (previous->left != nullptr) {
+      previous->left->parent = previous.get();
+      previous->right->parent = previous.get();
     }
-    View* oldView = node->view;
     node->view = nullptr;
     node->type = split;
     node->ratio = 0.5;
-
-    auto first = std::make_unique<Node>();
-    first->type = Node::Leaf;
-    first->parent = node;
-
-    auto second = std::make_unique<Node>();
-    second->type = Node::Leaf;
-    second->parent = node;
-
-    first->view = newFirst ? newView : oldView;
-    second->view = newFirst ? oldView : newView;
-
-    node->left = std::move(first);
-    node->right = std::move(second);
+    node->locked = split != Node::AutoSplit;
+    auto added = std::make_unique<Node>();
+    added->view = newView;
+    previous->parent = node;
+    added->parent = node;
+    node->left = std::move(previous);
+    node->right = std::move(added);
+    if (newFirst) {
+      std::swap(node->left, node->right);
+    }
   }
 
   void DwindleLayout::detachNode(Node* node) {
@@ -426,9 +423,9 @@ namespace umbriel {
     const int count = static_cast<int>(m_flatColumns.size());
     const int gap = std::clamp(columnIndex, 0, count);
     if (gap == 0) {
-      splitLeaf(nodeAtFlatIndex(0), view, Node::AutoSplit, /*newFirst=*/true);
+      splitNode(nodeAtFlatIndex(0), view, Node::AutoSplit, /*newFirst=*/true);
     } else {
-      splitLeaf(nodeAtFlatIndex(gap - 1), view, Node::AutoSplit, /*newFirst=*/false);
+      splitNode(nodeAtFlatIndex(gap - 1), view, Node::AutoSplit, /*newFirst=*/false);
     }
     rebuildFlatColumns();
   }
@@ -448,7 +445,7 @@ namespace umbriel {
     const int count = static_cast<int>(m_flatColumns.size());
     Node* target = nodeAtFlatIndex(std::clamp(columnIndex, 0, count - 1));
     if (target != nullptr && target->type == Node::Leaf) {
-      splitLeaf(target, view, Node::AutoSplit, /*newFirst=*/false);
+      splitNode(target, view, Node::AutoSplit, /*newFirst=*/false);
     }
     rebuildFlatColumns();
   }
@@ -466,6 +463,60 @@ namespace umbriel {
 
   bool DwindleLayout::moveViewVertical(View* view, int direction) {
     return swapLeafViews(findNode(view), findNode(umbriel::directionalNeighbor(m_targets, view, false, direction)));
+  }
+
+  DirectionalMoveResult DwindleLayout::moveView(View* view, bool horizontal, int direction) {
+    Node* node = findNode(view);
+    if (node == nullptr
+        || (direction != -1 && direction != 1)
+        || m_targets.size() != m_flatColumns.size()
+        || node->areaW <= 0
+        || node->areaH <= 0) {
+      return DirectionalMoveResult::Blocked;
+    }
+    const wlr_box area{m_root->areaX, m_root->areaY, m_root->areaW, m_root->areaH};
+    const Node::Type axis = horizontal ? Node::HSplit : Node::VSplit;
+    for (Node* child = node; child->parent != nullptr; child = child->parent) {
+      Node* parent = child->parent;
+      if (parent->type != axis) {
+        // Removing a direct child destroys its parent; the sibling survives in its place.
+        Node* remainder =
+            parent == node->parent ? (parent->left.get() == node ? parent->right.get() : parent->left.get()) : parent;
+        detachNode(node);
+        splitNode(remainder, view, axis, direction < 0);
+      } else {
+        const bool first = parent->left.get() == child;
+        if (first != (direction > 0)) {
+          continue;
+        }
+        Node* sibling = first ? parent->right.get() : parent->left.get();
+        if (child == node && sibling->type == Node::Leaf) {
+          swapLeafViews(node, sibling);
+          return DirectionalMoveResult::Moved;
+        }
+        // Restrict the existing geometric selector to the destination subtree.
+        std::vector<LayoutTarget> candidates;
+        for (const LayoutTarget& target : m_targets) {
+          for (Node* ancestor = findNode(target.view); ancestor != nullptr; ancestor = ancestor->parent) {
+            if (ancestor == sibling || ancestor == node) {
+              candidates.push_back(target);
+              break;
+            }
+          }
+        }
+        View* destination = directionalNeighbor(candidates, view, horizontal, direction);
+        if (destination == nullptr) {
+          return DirectionalMoveResult::Blocked;
+        }
+        detachNode(node);
+        splitNode(findNode(destination), view, axis, direction > 0);
+      }
+      m_targets.clear();
+      arrangeNode(m_root.get(), area);
+      rebuildFlatColumns();
+      return DirectionalMoveResult::Moved;
+    }
+    return DirectionalMoveResult::Boundary;
   }
 
   bool DwindleLayout::swapViews(View* a, View* b) { return swapLeafViews(findNode(a), findNode(b)); }
@@ -700,14 +751,13 @@ namespace umbriel {
       return;
     }
     if (edge == 0) {
-      splitLeaf(target, newView, Node::AutoSplit, /*newFirst=*/false);
+      splitNode(target, newView, Node::AutoSplit, /*newFirst=*/false);
       rebuildFlatColumns();
       return;
     }
     const bool horizontal = (edge & (WLR_EDGE_LEFT | WLR_EDGE_RIGHT)) != 0;
     const bool newFirst = (edge & (WLR_EDGE_LEFT | WLR_EDGE_TOP)) != 0;
-    splitLeaf(target, newView, horizontal ? Node::HSplit : Node::VSplit, newFirst);
-    target->locked = true;
+    splitNode(target, newView, horizontal ? Node::HSplit : Node::VSplit, newFirst);
     rebuildFlatColumns();
   }
 

@@ -136,6 +136,9 @@ extent_presets = [0.333, 0.5, 0.667]
 [layout.scrolling]
 default_extent_fraction = 0.5
 
+# [layout.dwindle]
+# directional_move = "restructure" # Reshape splits with directional movement
+
 # ==============================================================================
 # Window rules
 # Rules combine in order, with later values overriding earlier ones.
@@ -169,7 +172,16 @@ default_position = { x = 0, y = 0, anchor = "bottom_right" }
 default_focused = false
 default_pinned = true
 
-# =======================================================================[[layer_rule]]
+# Transparent overlays can opt out of compositor borders, corners, and shadows.
+# [[window_rule]]
+# match.app_id = "^org[.]example[.]Overlay$"
+# match.is_floating = true
+# decorations = false
+
+# ==============================================================================
+# Layer rules
+# https://docs.noctalia.dev/umbriel/layer-rules/
+[[layer_rule]]
 match.namespace = "^noctalia-(bar-[^\"]+|notification|dock|panel|attached-panel|osd|desktop-widget-[^\"]*)$"
 blur = true
 blur_ignore_alpha = 0.5

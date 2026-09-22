@@ -182,6 +182,7 @@ rule can override only `layout.struts.top`.
 | `layout.master.default_width_fraction` | Set the master-area fraction. |
 | `layout.master.new_on_top` | Place new stack windows at the top or bottom. |
 | `layout.master.new_becomes_master` | Give the master slot to new windows. |
+| `layout.dwindle.directional_move` | `"swap"` keeps tile swaps; `"restructure"` moves through the split tree. |
 | `layout.dwindle.preserve_split` | Keep split directions fixed. |
 
 ### Examples

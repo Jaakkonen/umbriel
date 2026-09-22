@@ -1368,13 +1368,30 @@ namespace umbriel {
     return true;
   }
 
-  bool Workspace::moveFocusedColumn(int direction) {
-    return scrollingVertical() ? moveWithinLane(direction) : moveLaneAlongStrip(direction);
+  DirectionalMoveResult Workspace::moveFocusedDirection(bool horizontal, int direction) {
+    DwindleLayout* dwindle = dwindleLayout();
+    if (dwindle != nullptr
+        && m_layoutConfig.dwindle.directionalMove == DwindleDirectionalMove::Restructure
+        && m_focusedView != nullptr
+        && m_focusedView->tiled()
+        && !m_focusedView->toplevel()->scheduled.fullscreen
+        && !m_focusedView->toplevel()->current.fullscreen
+        && !m_focusedView->toplevel()->scheduled.maximized
+        && !m_focusedView->toplevel()->current.maximized
+        && !m_focusedView->maximizedToEdges()) {
+      const auto result = dwindle->moveView(m_focusedView, horizontal, direction);
+      if (result == DirectionalMoveResult::Moved) {
+        markArrange();
+      }
+      return result;
+    }
+    const bool moved = horizontal != scrollingVertical() ? moveLaneAlongStrip(direction) : moveWithinLane(direction);
+    return moved ? DirectionalMoveResult::Moved : DirectionalMoveResult::Boundary;
   }
 
-  bool Workspace::moveFocusedVertical(int direction) {
-    return scrollingVertical() ? moveLaneAlongStrip(direction) : moveWithinLane(direction);
-  }
+  DirectionalMoveResult Workspace::moveFocusedColumn(int direction) { return moveFocusedDirection(true, direction); }
+
+  DirectionalMoveResult Workspace::moveFocusedVertical(int direction) { return moveFocusedDirection(false, direction); }
 
   bool Workspace::moveFocusedColumnFirst() {
     if (m_focusedView == nullptr) {

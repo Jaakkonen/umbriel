@@ -714,7 +714,9 @@ namespace umbriel {
 
     template <int Direction> bool actionMoveColumn(Server& server, const Keybind& /*bind*/, std::string* /*error*/) {
       if (Workspace* workspace = windowActionWorkspace(server)) {
-        invalidateHoverFocusAfterSceneChange(server, workspace->moveFocusedColumn(Direction));
+        invalidateHoverFocusAfterSceneChange(
+            server, workspace->moveFocusedColumn(Direction) == DirectionalMoveResult::Moved
+        );
       }
       return true;
     }
@@ -757,8 +759,11 @@ namespace umbriel {
         return true;
       }
       if (Workspace* workspace = windowActionWorkspace(server)) {
-        if (workspace->moveFocusedColumn(Direction)) {
-          maybeWarpCursorToWindow(server, workspace->focusedView());
+        const auto result = workspace->moveFocusedColumn(Direction);
+        if (result != DirectionalMoveResult::Boundary) {
+          if (result == DirectionalMoveResult::Moved) {
+            maybeWarpCursorToWindow(server, workspace->focusedView());
+          }
           return true;
         }
       }
@@ -771,8 +776,11 @@ namespace umbriel {
         return true;
       }
       if (Workspace* workspace = windowActionWorkspace(server)) {
-        if (workspace->moveFocusedVertical(Direction)) {
-          maybeWarpCursorToWindow(server, workspace->focusedView());
+        const auto result = workspace->moveFocusedVertical(Direction);
+        if (result != DirectionalMoveResult::Boundary) {
+          if (result == DirectionalMoveResult::Moved) {
+            maybeWarpCursorToWindow(server, workspace->focusedView());
+          }
           return true;
         }
       }
@@ -789,7 +797,7 @@ namespace umbriel {
     template <int Direction>
     bool actionMoveVerticalOrWorkspace(Server& server, const Keybind& /*bind*/, std::string* /*error*/) {
       if (Workspace* workspace = windowActionWorkspace(server)) {
-        if (!workspace->moveFocusedVertical(Direction)) {
+        if (workspace->moveFocusedVertical(Direction) == DirectionalMoveResult::Boundary) {
           Workspace* source = workspace;
           if (source->group() == nullptr) {
             return true;

@@ -48,6 +48,7 @@ namespace umbriel {
     bool expel(View* view, int direction) override;
     bool moveViewVertical(View* view, int direction) override;
     bool swapViews(View* a, View* b) override;
+    DirectionalMoveResult moveView(View* view, bool horizontal, int direction);
     void removeView(View* view) override;
     void moveColumn(int from, int to) override;
     void arrange(const wlr_box& usable) override;
@@ -100,7 +101,6 @@ namespace umbriel {
     [[nodiscard]] static double splitShare(const Split& split);
     static void setSplitShare(const Split& split, double share);
     bool applyFraction(const std::vector<Split>& splits, double fraction);
-    void splitLeaf(Node* node, View* newView, Node::Type split, bool newFirst);
     [[nodiscard]] Node* boundaryNode(const View* view, uint32_t edge) const;
     void arrangeNode(Node* node, const wlr_box& area);
     void collectColumns(const Node* node);
@@ -110,6 +110,7 @@ namespace umbriel {
     // arrange() in between would otherwise silently drop the second view.
     void rebuildFlatColumns();
     void detachNode(Node* node);
+    void splitNode(Node* node, View* newView, Node::Type split, bool newFirst);
 
     std::unique_ptr<Node> m_root;
     mutable std::vector<Column> m_flatColumns;

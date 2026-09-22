@@ -835,3 +835,134 @@ UMBRIEL_TEST(snapshotUsesMemberIdsInsteadOfCapturedViewPointers) {
 }
 
 int main() { return RUN_TESTS(); }
+
+UMBRIEL_TEST(restructureCreatesAndEscapesASplitBeforeTheBoundary) {
+  Fixture fixture;
+  fixture.layout.insertView(stub(0), 0);
+  fixture.layout.insertViewSplitOnView(stub(1), stub(0), WLR_EDGE_RIGHT);
+  fixture.layout.insertViewSplitOnView(stub(2), stub(1), WLR_EDGE_RIGHT);
+  fixture.layout.arrange(kUsable);
+  const auto left = fixture.layout.targetBox(stub(0));
+  using enum umbriel::DirectionalMoveResult;
+  CHECK(fixture.layout.moveView(stub(2), false, 1) == Moved);
+  auto upper = fixture.layout.targetBox(stub(1));
+  auto lower = fixture.layout.targetBox(stub(2));
+  CHECK_EQ(upper.x, lower.x);
+  CHECK(upper.y < lower.y);
+  CHECK_EQ(fixture.layout.targetBox(stub(0)).width, left.width);
+  // Both a deferred frame and default automatic orientation must retain this split.
+  fixture.layout.arrange(kUsable);
+  CHECK_EQ(fixture.layout.targetBox(stub(1)).x, fixture.layout.targetBox(stub(2)).x);
+  CHECK(fixture.layout.moveView(stub(2), false, 1) == Moved);
+  lower = fixture.layout.targetBox(stub(2));
+  CHECK_EQ(lower.x, left.x);
+  CHECK(fixture.layout.targetBox(stub(0)).y < lower.y);
+  CHECK(fixture.layout.targetBox(stub(1)).y < lower.y);
+  CHECK(fixture.layout.moveView(stub(2), false, 1) == Boundary);
+  CHECK_EQ(fixture.layout.targetBox(stub(2)).y, lower.y);
+  CHECK_EQ(fixture.layout.columns().size(), size_t{3});
+}
+
+UMBRIEL_TEST(restructureUsesTheNearestAncestorAndKeepsSiblingSlotSizes) {
+  Fixture fixture;
+  fixture.layout.insertView(stub(0), 0);
+  fixture.layout.insertViewSplitOnView(stub(1), stub(0), WLR_EDGE_RIGHT);
+  fixture.layout.insertViewSplitOnView(stub(2), stub(1), WLR_EDGE_BOTTOM);
+  fixture.layout.arrange(kUsable);
+  CHECK(fixture.layout.setResizeBoundary(stub(1), WLR_EDGE_BOTTOM, 0.3));
+  fixture.layout.arrange(kUsable);
+  const auto upper = fixture.layout.targetBox(stub(1));
+  const auto lower = fixture.layout.targetBox(stub(2));
+  CHECK(fixture.layout.moveView(stub(1), false, 1) == umbriel::DirectionalMoveResult::Moved);
+  fixture.layout.arrange(kUsable);
+  CHECK_EQ(fixture.layout.targetBox(stub(1)).y, lower.y);
+  CHECK_EQ(fixture.layout.targetBox(stub(1)).height, lower.height);
+  CHECK_EQ(fixture.layout.targetBox(stub(2)).height, upper.height);
+}
+
+UMBRIEL_TEST(restructureEntersTheSiblingSubtreeUsingGeometricOverlap) {
+  for (const double ratio : {0.5, 0.3}) {
+    Fixture fixture;
+    fixture.layout.insertView(stub(0), 0);
+    fixture.layout.insertViewSplitOnView(stub(1), stub(0), WLR_EDGE_RIGHT);
+    fixture.layout.insertViewSplitOnView(stub(2), stub(1), WLR_EDGE_BOTTOM);
+    fixture.layout.arrange(kUsable);
+    CHECK(fixture.layout.setResizeBoundary(stub(1), WLR_EDGE_BOTTOM, ratio));
+    fixture.layout.arrange(kUsable);
+    CHECK(fixture.layout.moveView(stub(0), true, 1) == umbriel::DirectionalMoveResult::Moved);
+    // Equal overlap chooses the first leaf; unequal overlap chooses the taller bottom leaf.
+    const auto destination = fixture.layout.targetBox(stub(ratio == 0.5 ? 1 : 2));
+    const auto moved = fixture.layout.targetBox(stub(0));
+    CHECK(moved.x < destination.x);
+    CHECK_EQ(moved.y, destination.y);
+    CHECK_EQ(moved.height, destination.height);
+  }
+}
+
+UMBRIEL_TEST(restructureBlocksMissingGeometryWithoutLosingMembership) {
+  Fixture fixture;
+  fixture.addLeaves(2);
+  using enum umbriel::DirectionalMoveResult;
+  CHECK(fixture.layout.moveView(stub(0), false, 1) == Blocked);
+  fixture.layout.arrange(kUsable);
+  const auto before = fixture.layout.targetBox(stub(0));
+  CHECK(fixture.layout.moveView(stub(9), false, 1) == Blocked);
+  CHECK(fixture.layout.moveView(stub(0), false, 0) == Blocked);
+  CHECK_EQ(fixture.layout.columns().size(), size_t{2});
+  CHECK_EQ(fixture.layout.targetBox(stub(0)).x, before.x);
+  CHECK_EQ(fixture.layout.targetBox(stub(0)).width, before.width);
+}
+
+UMBRIEL_TEST(repeatedRestructuringReachesTheBoundaryWithAutomaticAncestors) {
+  // Exercise real arrangement between presses, including auto-reorientation and
+  // uneven output sizes; a fixed-axis tree model alone misses those changes.
+  for (const auto usable : {kUsable, kPortraitUsable, wlr_box{10, 20, 3440, 1440}}) {
+    for (const bool preserve : {false, true}) {
+      for (int count = 1; count <= 6; ++count) {
+        for (int focused = 0; focused < count; ++focused) {
+          for (const bool horizontal : {false, true}) {
+            for (const int direction : {-1, 1}) {
+              Fixture fixture;
+              fixture.config.dwindle.preserveSplit = preserve;
+              fixture.addLeaves(count);
+              fixture.layout.arrange(usable);
+              auto result = umbriel::DirectionalMoveResult::Moved;
+              for (int step = 0; step < 3 * count && result == umbriel::DirectionalMoveResult::Moved; ++step) {
+                result = fixture.layout.moveView(stub(focused), horizontal, direction);
+                fixture.layout.arrange(usable);
+                CHECK_EQ(fixture.layout.columns().size(), static_cast<size_t>(count));
+                for (int member = 0; member < count; ++member) {
+                  CHECK(fixture.layout.columnOf(stub(member)) >= 0);
+                }
+              }
+              CHECK(result == umbriel::DirectionalMoveResult::Boundary);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+UMBRIEL_TEST(restructurePreservesUnaffectedRatioAndAutomaticOrientation) {
+  for (const bool locked : {false, true}) {
+    Fixture fixture;
+    fixture.layout.insertView(stub(0), 0);
+    fixture.layout.insertViewSplitOnView(stub(2), stub(0), WLR_EDGE_RIGHT);
+    fixture.layout.insertViewSplitOnView(stub(1), stub(0), locked ? WLR_EDGE_BOTTOM : 0);
+    fixture.layout.insertViewSplitOnView(stub(3), stub(2), WLR_EDGE_RIGHT);
+    fixture.layout.arrange(kUsable);
+    CHECK(fixture.layout.setResizeBoundary(stub(0), WLR_EDGE_BOTTOM, 0.3));
+    fixture.layout.arrange(kUsable);
+    CHECK(fixture.layout.moveView(stub(3), false, 1) == umbriel::DirectionalMoveResult::Moved);
+    // The untouched left pair keeps its 30/70 division. Only its existing lock
+    // determines whether it reorients when the output becomes very wide.
+    fixture.layout.arrange({0, 0, 10000, 400});
+    const auto first = fixture.layout.targetBox(stub(0));
+    const auto second = fixture.layout.targetBox(stub(1));
+    CHECK(locked ? first.x == second.x : first.y == second.y);
+    double ratio = 0.0;
+    CHECK(fixture.layout.resizeBoundary(stub(0), locked ? WLR_EDGE_BOTTOM : WLR_EDGE_RIGHT, &ratio, nullptr));
+    CHECK(std::abs(ratio - 0.3) < 0.000001);
+  }
+}

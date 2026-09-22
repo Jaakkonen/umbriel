@@ -275,6 +275,7 @@ center_underfull_strip = false
 always_center_single_column = true
 [layout.dwindle]
 preserve_split = true
+directional_move = "restructure"
 
 [output.DP-1]
 workspaces = ["dev"]
@@ -291,6 +292,7 @@ extent_presets = [0.25, 0.75]
 center_underfull_strip = true
 [workspace.layout.dwindle]
 preserve_split = false
+directional_move = "swap"
 )");
 
   ConfigStore& store = umbriel::configStore();
@@ -305,6 +307,7 @@ preserve_split = false
   CHECK_EQ(store.config().layout.extentPresets[2], 1.0);
   CHECK(!store.config().layout.scrolling.centerUnderfullStrip);
   CHECK(store.config().layout.dwindle.preserveSplit);
+  CHECK(store.config().layout.dwindle.directionalMove == umbriel::DwindleDirectionalMove::Restructure);
   CHECK(store.config().appearance.preferNoCsd);
   CHECK_EQ(store.config().outputs.size(), size_t{1});
   CHECK(store.config().outputs[0].scale.has_value());
@@ -315,6 +318,7 @@ preserve_split = false
   CHECK_EQ(store.config().workspaceRules[0].layout.extentPresets->size(), size_t{2});
   CHECK(store.config().workspaceRules[0].layout.scrolling.centerUnderfullStrip == true);
   CHECK(store.config().workspaceRules[0].layout.dwindle.preserveSplit == false);
+  CHECK(store.config().workspaceRules[0].layout.dwindle.directionalMove == umbriel::DwindleDirectionalMove::Swap);
   CHECK(containsDiagnostic(store, "unknown key unknown_root_key"));
   CHECK(containsDiagnostic(store, "output.DP-1.scale = 9"));
   CHECK(containsDiagnostic(store, "unknown key layout.scrolling.always_center_single_column"));
@@ -3149,3 +3153,15 @@ UMBRIEL_TEST(decorationsRuleLoadsAndIgnoresNonBooleanValues) {
 }
 
 int main() { return RUN_TESTS(); }
+
+UMBRIEL_TEST(dwindleDirectionalMoveRejectsInvalidValues) {
+  const TempConfig file;
+  ConfigStore& store = umbriel::configStore();
+  store.setRootPath(file.path(), true);
+  for (const auto value : {"true", "\"unknown\""}) {
+    file.write(std::string("[layout.dwindle]\ndirectional_move = ") + value + "\n");
+    CHECK(store.reload().success);
+    CHECK(store.config().layout.dwindle.directionalMove == umbriel::DwindleDirectionalMove::Swap);
+    CHECK(containsDiagnostic(store, "directional_move"));
+  }
+}

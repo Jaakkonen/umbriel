@@ -1086,3 +1086,17 @@ UMBRIEL_TEST(decorationsRulesPreserveFalseAndRestoreWhenStateStopsMatching) {
 }
 
 int main() { return RUN_TESTS(); }
+
+UMBRIEL_TEST(dwindleDirectionalMoveInheritsAndOverridesPerWorkspace) {
+  Config config;
+  using enum umbriel::DwindleDirectionalMove;
+  CHECK(umbriel::resolveGlobalLayout(config).dwindle.directionalMove == Swap);
+  config.layout.dwindle.directionalMove = Restructure;
+  CHECK(umbriel::resolveGlobalLayout(config).dwindle.directionalMove == Restructure);
+  WorkspaceConfig rule;
+  rule.name = "local";
+  rule.layout.dwindle.directionalMove = Swap;
+  config.workspaceRules.push_back(rule);
+  CHECK(umbriel::resolveWorkspaceLayout(config, identity("DP-1"), "local", 0).dwindle.directionalMove == Swap);
+  CHECK(umbriel::resolveWorkspaceLayout(config, identity("DP-1"), "other", 1).dwindle.directionalMove == Restructure);
+}

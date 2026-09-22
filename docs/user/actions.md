@@ -205,7 +205,7 @@ Column and extent actions adapt to the active layout:
 
 | Action group | Scrolling | Dwindle | Master |
 | --- | --- | --- | --- |
-| Column movement | Reorders columns | Swaps neighboring tiles | Exchanges master and stack contents |
+| Column movement | Reorders columns | Swaps tiles, or reshapes splits with [`directional_move = "restructure"`](layout.md#directional-movement) | Exchanges master and stack contents |
 | Consume and expel | Joins or splits columns | Swaps directional neighbors | Moves between master and stack |
 | Primary extent | Changes column width | Adjusts horizontal splits | Changes master fraction |
 | Secondary extent | Changes a row | Adjusts vertical splits | Changes a row |

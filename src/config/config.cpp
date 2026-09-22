@@ -353,6 +353,29 @@ namespace umbriel {
       return std::nullopt;
     }
 
+    std::optional<DwindleDirectionalMove> readDirectionalMove(Section& section, std::string_view context) {
+      const toml::node* node = section.take("directional_move");
+      if (node == nullptr) {
+        return std::nullopt;
+      }
+      const auto* value = node->as_string();
+      if (value == nullptr) {
+        warnAt(node->source(), "{}.directional_move must be a string", context);
+        return std::nullopt;
+      }
+      if (value->get() == "swap") {
+        return DwindleDirectionalMove::Swap;
+      }
+      if (value->get() == "restructure") {
+        return DwindleDirectionalMove::Restructure;
+      }
+      warnAt(
+          node->source(), R"(unknown {}.directional_move "{}" (expected "swap" or "restructure"))", context,
+          value->get()
+      );
+      return std::nullopt;
+    }
+
     std::optional<MasterPosition> readMasterPosition(Section& section, std::string_view context) {
       const toml::node* node = section.take("position");
       if (node == nullptr) {
@@ -630,6 +653,9 @@ namespace umbriel {
               }
             });
             s.sub("dwindle", [&](Section& sd) {
+              if (const auto movement = readDirectionalMove(sd, layoutContext + ".dwindle")) {
+                overrides.dwindle.directionalMove = movement;
+              }
               sd.boolean("preserve_split", overrides.dwindle.preserveSplit)
                   .boolean("new_exits_fullscreen", overrides.dwindle.newExitsFullscreen);
             });
@@ -1352,6 +1378,9 @@ namespace umbriel {
           }
         });
         s.sub("dwindle", [&](Section& sd) {
+          if (const auto movement = readDirectionalMove(sd, "layout.dwindle")) {
+            loaded.layout.dwindle.directionalMove = *movement;
+          }
           sd.boolean("preserve_split", loaded.layout.dwindle.preserveSplit)
               .boolean("new_exits_fullscreen", loaded.layout.dwindle.newExitsFullscreen);
         });
