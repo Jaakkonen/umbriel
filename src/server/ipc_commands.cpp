@@ -3,6 +3,7 @@
 #include "config/change.h"
 #include "config/config.h"
 #include "input/cursor.h"
+#include "input/seat.h"
 #include "layer/layer_surface.h"
 #include "output/output.h"
 #include "scene/effect_registry.h"
@@ -453,6 +454,7 @@ namespace umbriel {
 
   nlohmann::json IpcCommands::windows(Server& server, std::string_view /*arg*/) {
     nlohmann::json windows = nlohmann::json::array();
+    const View* keyboardFocused = View::fromSurface(server.seat()->wlr()->keyboard_state.focused_surface);
     std::map<const Workspace*, std::unique_ptr<Layout>> pendingLayouts;
     for (const auto& v : server.views()) {
       if (!v->mapped()) {
@@ -464,6 +466,7 @@ namespace umbriel {
       const ScratchpadManager* scratchpads = server.scratchpadManager();
       entry["scratchpad"] = scratchpads != nullptr ? std::string(scratchpads->nameFor(v.get())) : std::string{};
       entry["active"] = v->activated();
+      entry["keyboard_focused"] = keyboardFocused == v.get();
       entry["app_id"] = v->appId() != nullptr ? v->appId() : "";
       entry["title"] = v->title() != nullptr ? v->title() : "";
       entry["xdg_tag"] = v->xdgTag().value_or("");

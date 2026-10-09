@@ -2269,6 +2269,7 @@ namespace umbriel {
   void Server::onPadKeyboardFocusChange(wl_listener* listener, void* data) {
     Server* self;
     self = wl_container_of(listener, self, m_padKeyboardFocusChange);
+    self->scheduleIpcWindowsEvent();
     auto* event = static_cast<wlr_seat_keyboard_focus_change_event*>(data);
     for (const auto& pad : self->m_tabletPads) {
       if (pad->tablet == nullptr) {

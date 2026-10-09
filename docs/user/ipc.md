@@ -34,6 +34,13 @@ tabs as `tab_index` (from 0, `-1` outside a group), and `tab_hidden` while its
 group shows another tab; the plain listing marks it `tab` instead of
 `tile`.
 
+`keyboard_focused` reports whether the seat's keyboard focus belongs to that
+window, including its popups. It is distinct from `focused` (remembered
+workspace focus) and `active` (activation, which can select an overview card).
+When overview, a layer surface, or the session lock owns keyboard input, no
+window reports `keyboard_focused`. The `windows` event also updates when the
+seat's keyboard focus changes.
+
 Workspace entries include a stable ID, display name, index, output, layout,
 occupancy, and active and focused states. Use the `named` boolean instead of
 guessing from the display name; an explicitly named workspace may still be
